@@ -16,7 +16,7 @@
         $(document).ready(function () {
             const AVATAR = 'https://api.dicebear.com/7.x/identicon/svg?seed='
             const IMG_EXTENSIONS = [".png", ".svg", ".webp", ".jpg", ".gif", ".jpeg"];
-            var socket = io.connect(window.location.hostname);
+            var socket = io.connect(window.location.hostname + ":5000");
             socket.on('connect', function () {
                 console.log('Connected!');
             });
