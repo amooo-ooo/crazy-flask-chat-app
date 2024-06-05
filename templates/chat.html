@@ -57,7 +57,7 @@
                 var username = '{{ username }}'; 
                 var text = $('#message-input').val();
                 if (text.length > 0){
-                socket.emit('message', { username: username, text: text });
+                socket.emit('message', { uid: uid, text: text });
                 $('#message-input').val('');}
             });
 
