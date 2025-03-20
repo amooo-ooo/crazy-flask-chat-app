@@ -11,92 +11,51 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap"
       rel="stylesheet"
     />
-    <link
-      rel="stylesheet"
-      href="{{ url_for('static', filename='style.css') }}"
-    />
-    <script src="https://cdn.socket.io/4.1.2/socket.io.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script type="text/javascript">
-      $(document).ready(function () {
-        const AVATAR = "https://api.dicebear.com/7.x/identicon/svg?seed=";
-        const IMG_EXTENSIONS = [
-          ".png",
-          ".svg",
-          ".webp",
-          ".jpg",
-          ".gif",
-          ".jpeg",
-        ];
-        var socket = io.connect(window.location.hostname + ":5000");
-        socket.on("connect", function () {
-          console.log("Connected!");
-        });
-
-        // Listen for incoming messages
-        socket.on("message", function (data) {
-          displayMessage(data.username, data.text);
-        });
-
-        // Function to display a message
-        function displayMessage(username, text) {
-          var messageContainer = $("<div>").addClass("message-container");
-          var userImage = $("<img>")
-            .addClass("avatar")
-            .attr("src", AVATAR + username);
-          var contents = $("<div>").addClass("contents");
-          var sentBy = $("<p>")
-            .addClass("author")
-            .text("Sent by @" + username);
-
-          if (IMG_EXTENSIONS.some((extension) => text.endsWith(extension))) {
-            var messageText = $("<div>").addClass("filter");
-            var img = $("<img>").attr("src", text);
-            messageText.append(img);
-          } else {
-            var messageText = $("<p>").text(text);
-          }
-
-          const element = document.getElementById("chat-area");
-          const isAtMaxBottom =
-            element.scrollHeight - element.scrollTop === element.clientHeight;
-
-          contents.append(sentBy, messageText);
-          messageContainer.append(userImage, contents);
-          $("#chat-area").append(messageContainer);
-
-          if (isAtMaxBottom) {
-            element.scrollTop =
-              document.getElementById("chat-area").scrollHeight;
-          }
-        }
-
-        $("#send-button").click(function () {
-          var username = "{{ username }}";
-          var text = $("#message-input").val();
-          if (text.length > 0) {
-            socket.emit("message", { username: username, text: text });
-            $("#message-input").val("");
-          }
-        });
-
-        const messageInput = document.getElementById("message-input");
-        messageInput.addEventListener("keydown", (event) => {
-          if (event.key === "Enter") {
-            event.preventDefault(); // Prevent the default Enter behavior (e.g., new line)
-            $("#send-button").click(); // Trigger the send button click
-          }
-        });
-      });
-    </script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   </head>
 
   <body>
-    <section>
-      <div id="chat-area"></div>
+    <section x-data="{
+      messages: {{ messages }},
+      message: '',
+      username: '{{ username }}',
+      secret: '{{ secret }}',
+      ws: new WebSocket('ws://{{ request.host }}/chat'),
+      sendMessage() {
+        if (this.message.trim() !== '') {
+          this.ws.send(JSON.stringify({ secret: this.secret, text: this.message }));
+          this.message = '';
+        }
+      }
+    }" x-init="ws.onmessage = event => messages.push(JSON.parse(event.data))">
+      
+      <div id="chat-area">
+        <template x-for="msg in messages" :key="msg.text">
+          <div class="message-container">
+            <img class="avatar" :src="'https://api.dicebear.com/7.x/identicon/svg?seed=' + msg.username" />
+            <div class="contents">
+              <p class="author">Sent by @<span x-text="msg.username"></span></p>
+              <template x-if="msg.text.match(/\.(png|svg|webp|jpg|gif|jpeg)$/)">
+                <img :src="msg.text" />
+              </template>
+              <template x-if="!msg.text.match(/\.(png|svg|webp|jpg|gif|jpeg)$/)">
+                <p x-text="msg.text"></p>
+              </template>
+            </div>
+          </div>
+        </template>
+      </div>
+      
       <div id="send-message">
-        <input type="text" id="message-input" placeholder="Message @all" />
-        <button id="send-button">⚡</button>
+        <input 
+          type="text" 
+          id="message-input" 
+          placeholder="Message @all" 
+          x-model="message" 
+          @keydown.enter.prevent="sendMessage()" 
+        />
+        <button id="send-button" @click="sendMessage()">⚡</button>
       </div>
     </section>
   </body>
