@@ -23,6 +23,33 @@
       username: '{{ username }}',
       secret: '{{ secret }}',
       socket: null,
+      randomId() {
+        return Math.random().toString(36).substring(2, 15);
+      },
+      groupedMessages() {
+        return this.messages.reduce((groups, msg, index) => {
+          if (typeof msg !== 'object') return groups;
+      
+          const isImage = msg.text.match(/\.(png|svg|webp|jpg|gif|jpeg)$/i);
+          const formattedMsg = {
+            html: isImage
+              ? `<img src='${msg.text}' class='chat-image'/>`
+              : `<p>${msg.text}</p>`,
+          };
+      
+          if (index === 0 || this.messages[index - 1].username !== msg.username) {
+            groups.push({
+              username: msg.username,
+              contents: [formattedMsg],
+              id: this.randomId()
+            });
+          } else {
+            groups[groups.length - 1].contents.push(formattedMsg);
+          }
+      
+          return groups;
+        }, []);
+      },
       sendMessage() {
         if (this.message.trim() !== '') {
           this.socket.emit('message', { secret: this.secret, text: this.message });
@@ -36,17 +63,16 @@
     ">
       
       <div id="chat-area">
-        <template x-for="msg in messages" :key="msg.text + msg.username">
+        <template x-for="group in groupedMessages()" :key="group.id">
           <div class="message-container">
-            <img class="avatar" :src="'https://api.dicebear.com/7.x/identicon/svg?seed=' + msg.username" />
+            <img class="avatar" :src="'https://api.dicebear.com/7.x/identicon/svg?seed=' + group.username" />
             <div class="contents">
-              <p class="author">Sent by @<span x-text="msg.username"></span></p>
-              <template x-if="msg.text.match(/\.(png|svg|webp|jpg|gif|jpeg)$/)">
-                <img :src="msg.text" />
-              </template>
-              <template x-if="!msg.text.match(/\.(png|svg|webp|jpg|gif|jpeg)$/)">
-                <p x-text="msg.text"></p>
-              </template>
+              <p class="author">Sent by @<span x-text="group.username"></span></p>
+              <div>
+                <template x-for="msg in group.contents" :key="randomId()">
+                  <div x-html="msg.html"></div>
+                </template>                
+              </div>
             </div>
           </div>
         </template>
