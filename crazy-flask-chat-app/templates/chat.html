@@ -13,6 +13,7 @@
     />
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
   </head>
 
   <body>
@@ -21,17 +22,21 @@
       message: '',
       username: '{{ username }}',
       secret: '{{ secret }}',
-      ws: new WebSocket('ws://{{ request.host }}/chat'),
+      socket: null,
       sendMessage() {
         if (this.message.trim() !== '') {
-          this.ws.send(JSON.stringify({ secret: this.secret, text: this.message }));
+          this.socket.emit('message', { secret: this.secret, text: this.message });
           this.message = '';
         }
       }
-    }" x-init="ws.onmessage = event => messages.push(JSON.parse(event.data))">
+    }" x-init="
+      socket = io();
+      socket.on('message', msg => messages.push(msg));
+      socket.on('connect_error', error => console.error('Socket.IO connection error:', error));
+    ">
       
       <div id="chat-area">
-        <template x-for="msg in messages" :key="msg.text">
+        <template x-for="msg in messages" :key="msg.text + msg.username">
           <div class="message-container">
             <img class="avatar" :src="'https://api.dicebear.com/7.x/identicon/svg?seed=' + msg.username" />
             <div class="contents">

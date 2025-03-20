@@ -4,13 +4,12 @@ from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 
-
 app = Flask(__name__)
 CORS(app)
-socketio = SocketIO(app)
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 MESSAGES = []
-USERS = {} 
+USERS = {}
 SECRETS = {}
 
 @app.route('/')
@@ -37,15 +36,16 @@ def chat():
         'chat.html',
         username=username,
         secret=USERS[username]['secret'],
-        messages=json.dumps(MESSAGES)
+        messages=MESSAGES
     )
 
 @socketio.on('message')
 def handle_message(message):
-    username = SECRETS.get(message['secret'])
+    username = SECRETS.get(message.get('secret'))
     if username:
-        MESSAGES.append({'username': username, 'message': message['text']})
-        emit('message', {'username': username, 'text': message['text']}, broadcast=True)
+        msg = {'username': username, 'text': message.get('text', '')}
+        MESSAGES.append(msg)
+        emit('message', msg, broadcast=True)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0")
+    socketio.run(app, host="0.0.0.0")
