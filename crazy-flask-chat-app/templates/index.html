@@ -15,18 +15,27 @@
       rel="stylesheet"
       href="{{ url_for('static', filename='style.css') }}"
     />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   </head>
   <body>
-    <main>
-      {% block header %}
+    <main x-data="{
+      hashPassword(event) {
+        event.preventDefault();
+        const password = document.getElementById('password').value;
+        const username = document.getElementById('username').value;
 
+        document.getElementById('hashed-password').value = CryptoJS.SHA256(password + CryptoJS.SHA256(username)).toString();
+
+        document.getElementById('password').value = '';
+        event.target.submit();
+      }
+    }">
       <h1>{% block title %}Get Started{% endblock %}</h1>
       <p>
         {{"Get absolutely crazy with this over the top super-chat Flask App."}}
       </p>
-
-      {% endblock %} {% block content %}
-      <form method="post" action="{{ url_for('chat') }}">
+      <form method="post" action="{{ url_for('chat') }}" @submit="hashPassword">
         <input
           type="text"
           placeholder="Username"
@@ -38,14 +47,13 @@
         <input
           type="password"
           placeholder="Password"
-          name="password"
-          value="{{ request.form.password }}"
+          name="raw-password"
           id="password"
           required
         />
+        <input type="hidden" name="password" id="hashed-password" value="{{ request.form.password }}"/>
         <input type="submit" value="Log In" />
       </form>
-      {% endblock %}
       <p>{{ error }}</p>
     </main>
   </body>
